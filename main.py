@@ -15,6 +15,7 @@ import shlex
 
 logger = logging.getLogger(__name__)
 
+
 class SshExtension(Extension):
 
     def __init__(self):
@@ -45,7 +46,7 @@ class SshExtension(Extension):
                                             hosts.append(lc.strip("host").strip("\n").strip())
 
                     if line_lc.startswith("host") and "*" not in line_lc and "keyalgorithms" not in line_lc:
-                        len_hosts=len(line_lc.strip("host").strip("\n").strip().split())
+                        len_hosts = len(line_lc.strip("host").strip("\n").strip().split())
                         if len_hosts > 1:
                             hosts.extend(line_lc.strip("host").strip("\n").strip().split())
                         else:
@@ -79,15 +80,23 @@ class SshExtension(Extension):
         home = expanduser("~")
 
         cmd = self.terminal_cmd.replace("%SHELL", shell).replace("%CONN", addr)
-
+        '''
+            Fix the bug, which caused the command not to be found
+            Separate cmd commands with spaces
+        '''
+        args = [self.terminal, self.terminal_arg]
+        for single_cmd in cmd.split(' '):
+            args.append(single_cmd)
         if self.terminal:
-            subprocess.Popen([self.terminal, self.terminal_arg, cmd], cwd=home)
+            subprocess.Popen(args, cwd=home)
+
 
 class ItemEnterEventListener(EventListener):
 
     def on_event(self, event, extension):
         data = event.get_data()
         extension.launch_terminal(data)
+
 
 class PreferencesUpdateEventListener(EventListener):
 
@@ -102,6 +111,7 @@ class PreferencesUpdateEventListener(EventListener):
         elif event.id == "ssh_launcher_use_known_hosts":
             extension.use_known_hosts = event.new_value
 
+
 class PreferencesEventListener(EventListener):
 
     def on_event(self, event, extension):
@@ -109,6 +119,7 @@ class PreferencesEventListener(EventListener):
         extension.terminal_arg = event.preferences["ssh_launcher_terminal_arg"]
         extension.terminal_cmd = event.preferences["ssh_launcher_terminal_cmd"]
         extension.use_known_hosts = event.preferences["ssh_launcher_use_known_hosts"]
+
 
 class KeywordQueryEventListener(EventListener):
 
@@ -128,18 +139,19 @@ class KeywordQueryEventListener(EventListener):
 
         for host in hosts:
             items.append(ExtensionResultItem(icon=icon,
-                                            name=host,
-                                            description="Connect to '{}' with SSH".format(host),
-                                            on_enter=ExtensionCustomAction(host, keep_app_open=False)))
+                                             name=host,
+                                             description="Connect to '{}' with SSH".format(host),
+                                             on_enter=ExtensionCustomAction(host, keep_app_open=False)))
 
         # If there are no results, let the user connect to the specified server.
         if len(items) <= 0:
             items.append(ExtensionResultItem(icon=icon,
-                                            name=arg,
-                                            description="Connect to {} with SSH".format(arg),
-                                            on_enter=ExtensionCustomAction(arg, keep_app_open=False)))
+                                             name=arg,
+                                             description="Connect to {} with SSH".format(arg),
+                                             on_enter=ExtensionCustomAction(arg, keep_app_open=False)))
 
         return RenderResultListAction(items)
+
 
 if __name__ == '__main__':
     SshExtension().run()
